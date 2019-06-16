@@ -2,6 +2,7 @@
 import os
 import random
 import numpy as np
+from nltk import ngrams
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 import torch
@@ -74,23 +75,58 @@ def build_vocab_maps(vocab_file):
 
 
 def extract_attributes(line, attribute_vocab):
-    content = []
-    attribute = []
-    for tok in line:
-        if tok in attribute_vocab:
-            attribute.append(tok)
-        else:
-            content.append(tok)
+    # generate all ngrams for the sentence
+    grams = []
+    for i in range(1, 5):
+        i_grams = [
+            " ".join(gram)
+            for gram in ngrams(line, i)
+        ]
+        grams.extend(i_grams)
 
-    return line, content, attribute
+    # filter ngrams by whether they appear in the attribute_vocab
+    candidate_markers = [
+        (gram, attribute_vocab[gram]) for gram in grams if gram in attribute_vocab
+    ]
+
+    # sort attribute markers by score and prepare for deletion
+    content = " ".join(line)
+    candidate_markers.sort(key=lambda x: x[1], reverse=True)
+
+    candidate_markers = [marker for (marker, score) in candidate_markers]
+    # delete based on highest score first
+    attribute_markers = []
+    for marker, score in candidate_markers:
+        if marker in content:
+            attribute_markers.append(marker)
+            content = content.replace(marker, "")
+    return line, content.split(), attribute_markers
 
 
 def read_nmt_data(src, config, tgt, attribute_vocab, train_src=None, train_tgt=None):
-    attribute_vocab = set([x.strip() for x in open(attribute_vocab)])
+    # read attribute vocabulary as a dictionary mapping attributes to scores
+    pre_attr = {}
+    post_attr = {}
+
+    salience = config["salience_threshold"]
+
+    with open(attribute_vocab) as attr_file:
+        next(attr_file)  # skip the header line
+        for line in attr_file:
+            split = line.strip().split()
+            pre_salience = split[-2]
+            post_salience = split[-1]
+            attr = ' '.join(split[:-2])
+
+            # usually, markers are only salient for one attribute, so we double check here
+            if pre_salience > salience:
+                pre_attr[attr] = pre_salience
+            if post_salience > salience:
+                post_attr[attr] = post_salience
 
     src_lines = [l.strip().lower().split() for l in open(src, 'r')]
     src_lines, src_content, src_attribute = list(zip(
-        *[extract_attributes(line, attribute_vocab) for line in src_lines]
+        *[extract_attributes(line, pre_attr) for line in src_lines]
     ))
     src_tok2id, src_id2tok = build_vocab_maps(config['data']['src_vocab'])
     # train time: just pick attributes that are close to the current (using word distance)
@@ -112,7 +148,7 @@ def read_nmt_data(src, config, tgt, attribute_vocab, train_src=None, train_tgt=N
 
     tgt_lines = [l.strip().lower().split() for l in open(tgt, 'r')] if tgt else None
     tgt_lines, tgt_content, tgt_attribute = list(zip(
-        *[extract_attributes(line, attribute_vocab) for line in tgt_lines]
+        *[extract_attributes(line, post_attr) for line in tgt_lines]
     ))
     tgt_tok2id, tgt_id2tok = build_vocab_maps(config['data']['tgt_vocab'])
     # train time: just pick attributes that are close to the current (using word distance)
@@ -270,7 +306,7 @@ def minibatch(src, tgt, idx, batch_size, max_len, model_type, is_test=False):
             attributes =  get_minibatch(
                 out_dataset['attribute'], out_dataset['tok2id'], idx, 
                 batch_size, max_len, idx=inputs[-1],
-                dist_measurer=out_dataset['dist_measurer'], sample_rate=0.25)
+                dist_measurer=out_dataset['dist_measurer'], sample_rate=0.1)
 
     elif model_type == 'seq2seq':
         # ignore the in/out dataset stuff
