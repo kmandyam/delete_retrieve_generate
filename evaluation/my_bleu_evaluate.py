@@ -6,9 +6,8 @@ Authors: Juncen Li, Robin Jia, He He, Percy Liang
 """
 
 import math
-
 import sys
-import string
+import os
 
 def load_dict(file_name):
     word_dict = {}
@@ -16,7 +15,7 @@ def load_dict(file_name):
     for line in f:
         lines = line.strip().split('\t')
         if (len(lines) == 2):
-            word_dict[lines[0]] = string.atoi(lines[1])
+            word_dict[lines[0]] = int(lines[1])
     return word_dict
 
 def sen_to_array(sen, word_dict, sen1):
@@ -87,33 +86,28 @@ def brevity_penalty(candidate, references):
         return math.exp(1 - r / c)
 
 if __name__ == "__main__":
-    word_dict = load_dict(sys.argv[3])  # dict_file
+    DICT_FILENAME = os.path.join(os.path.dirname(__file__), 'zhi.dict.orgin')
+    word_dict = load_dict(DICT_FILENAME)  # dict_file
     can = {}
     query = ''
     answer = []
-    # weight=[0.5,0.5]
-    weight_num = string.atoi(sys.argv[4])
+
+    weight_num = 4
     weight = []
     for i in range(weight_num):
         weight.append(1.0 / weight_num)
+
     f = open(sys.argv[1], 'r')  # generate_file
     for line in f:
         lines = line.strip().split('\t')
-        if (len(lines) == 3):
+        if len(lines) == 3:
             can[lines[0].strip()] = sen_to_array(lines[1].strip(), word_dict, lines[0])
-            '''
-            if(lines[1]=='1'):
-                if(query!='' and answer!=[]):
-                    can[query]=sen_to_array(answer[0].strip(),word_dict)
-                query=lines[0]
-                answer=[]
-            else:
-                answer.append(lines[0].replace('result: <END> ',''))
-            '''
     f.close()
     print(len(can))
     ref = {}
-    f = open(sys.argv[2], 'r')  # orgin_file
+
+    HUMAN_OUTPUTS = os.path.join(os.path.dirname(__file__), 'human.outputs')
+    f = open(HUMAN_OUTPUTS, 'r')  # orgin_file
     for line in f:
         lines = line.strip().split('\t')
         if (len(lines) == 2):
