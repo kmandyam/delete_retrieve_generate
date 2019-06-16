@@ -96,7 +96,7 @@ def extract_attributes(line, attribute_vocab):
     candidate_markers = [marker for (marker, score) in candidate_markers]
     # delete based on highest score first
     attribute_markers = []
-    for marker, score in candidate_markers:
+    for marker in candidate_markers:
         if marker in content:
             attribute_markers.append(marker)
             content = content.replace(marker, "")
@@ -108,14 +108,14 @@ def read_nmt_data(src, config, tgt, attribute_vocab, train_src=None, train_tgt=N
     pre_attr = {}
     post_attr = {}
 
-    salience = config["salience_threshold"]
+    salience = config["data"]["salience_threshold"]
 
     with open(attribute_vocab) as attr_file:
         next(attr_file)  # skip the header line
         for line in attr_file:
             split = line.strip().split()
-            pre_salience = split[-2]
-            post_salience = split[-1]
+            pre_salience = float(split[-2])
+            post_salience = float(split[-1])
             attr = ' '.join(split[:-2])
 
             # usually, markers are only salient for one attribute, so we double check here
