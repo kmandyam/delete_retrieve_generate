@@ -36,6 +36,17 @@ python tools/make_vocab.py [entire corpus file (src + tgt cat'd)] [vocab size] >
 python tools/make_attribute_vocab.py vocab.txt [corpus src file] [corpus tgt file] [salience ratio] > attribute_vocab.txt
 ```
 
+### Evaluation
+
+Running model training with the ```--bleu``` flag produces output predictions in the working directory. 
+To evaluate the file ```preds.*```, use the script in ```/evaluation```:
+
+```
+python evaluation/my_bleu_evaluate.py preds.*
+```
+
+To evaluate sample outputs from the _delete_ model, use the predictions in ```sample_predictions/```.
+
 # Questions, feedback, bugs
 
 rpryzant@stanford.edu
