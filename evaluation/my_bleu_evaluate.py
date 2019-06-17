@@ -3,6 +3,7 @@ BLEU evaluation script from Li et al. (2018)
 Paper: https://arxiv.org/pdf/1804.06437.pdf
 Original Code Reference: https://github.com/lijuncen/Sentiment-and-Style-Transfer
 Authors: Juncen Li, Robin Jia, He He, Percy Liang
+Argument: Predictions file from working directory
 """
 
 import math
@@ -14,15 +15,15 @@ def load_dict(file_name):
     f = open(file_name, 'r')
     for line in f:
         lines = line.strip().split('\t')
-        if (len(lines) == 2):
+        if len(lines) == 2:
             word_dict[lines[0]] = int(lines[1])
     return word_dict
 
-def sen_to_array(sen, word_dict, sen1):
+def sen_to_array(sen, word_dict):
     sens = sen.strip().split(' ')
     words = []
     for i in sens:
-        if (word_dict.get(i) != None):
+        if word_dict.get(i) is not None:
             words.append(word_dict.get(i))
     return words
 
@@ -43,7 +44,7 @@ def modified_precision(candidate, references, n):
     for reference in references:
         reference_counts = counter_gram(reference, n)
         for ngram in counts.keys():
-            if (reference_counts.get(ngram) != None):
+            if reference_counts.get(ngram) is not None:
                 max_counts[ngram] = max(max_counts.get(ngram, 0), reference_counts[ngram])
             else:
                 max_counts[ngram] = 0.000000001
@@ -58,7 +59,7 @@ def counter_gram(word_array, n):
         for j in range(0, n):
             tmp_i += str(word_array[i + j])
             tmp_i += ' '
-        if (ngram_words.get(tmp_i) == None):
+        if ngram_words.get(tmp_i) is None:
             ngram_words[tmp_i] = 1
         else:
             ngram_words[tmp_i] += 1
@@ -74,8 +75,31 @@ def brevity_penalty(candidate, references):
     else:
         return math.exp(1 - r / c)
 
+
+def format_predictions(preds_file, human_output_file):
+    predictions = []
+    p_file = open(preds_file)
+    for p in p_file:
+        predictions.append(p.strip())
+
+    formatted_predictions = []
+    h_file = open(human_output_file)
+    i = 0
+    for h in h_file:
+        original = h.split('\t')[0].strip()
+        formatted_predictions.append(original + '\t' + predictions[i])
+        i += 1
+
+    p_file.close()
+    h_file.close()
+
+    return formatted_predictions
+
+
 if __name__ == "__main__":
     DICT_FILENAME = os.path.join(os.path.dirname(__file__), 'zhi.dict.orgin')
+    HUMAN_OUTPUTS = os.path.join(os.path.dirname(__file__), 'human.outputs')
+
     word_dict = load_dict(DICT_FILENAME)  # dict_file
     can = {}
     query = ''
@@ -86,34 +110,33 @@ if __name__ == "__main__":
     for i in range(weight_num):
         weight.append(1.0 / weight_num)
 
-    f = open(sys.argv[1], 'r')  # generate_file
-    for line in f:
+    formatted_predictions = format_predictions(sys.argv[1], HUMAN_OUTPUTS)
+
+    for line in formatted_predictions:
         lines = line.strip().split('\t')
-        if len(lines) == 3:
-            can[lines[0].strip()] = sen_to_array(lines[1].strip(), word_dict, lines[0])
-    f.close()
+        can[lines[0].strip()] = sen_to_array(lines[1].strip(), word_dict)
+
     print(len(can))
     ref = {}
 
-    HUMAN_OUTPUTS = os.path.join(os.path.dirname(__file__), 'human.outputs')
-    f = open(HUMAN_OUTPUTS, 'r')  # orgin_file
+    f = open(HUMAN_OUTPUTS, 'r')  # human output file
     for line in f:
         lines = line.strip().split('\t')
-        if (len(lines) == 2):
+        if len(lines) == 2:
             lines[0] = lines[0]
-            if (ref.get(lines[0].strip()) == None):
+            if ref.get(lines[0].strip()) is None:
                 tmp = []
-                tmp.append(sen_to_array(lines[1].strip(), word_dict, lines[0]))
+                tmp.append(sen_to_array(lines[1].strip(), word_dict))
                 ref[lines[0].strip()] = tmp
             else:
-                ref[lines[0].strip()].append(sen_to_array(lines[1].strip(), word_dict, lines[0]))
+                ref[lines[0].strip()].append(sen_to_array(lines[1].strip(), word_dict))
     f.close()
     print(len(ref))
 
     bleu_array = []
     bleu_total = 0
     for i in can.keys():
-        if (ref.get(i) != None):
+        if ref.get(i) is not None:
             bleu_score = compute(can[i], ref[i], weight)
             bleu_total += bleu_score
             bleu_array.append(bleu_score)
