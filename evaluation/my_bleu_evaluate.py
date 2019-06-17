@@ -20,21 +20,13 @@ def load_dict(file_name):
 
 def sen_to_array(sen, word_dict, sen1):
     sens = sen.strip().split(' ')
-    sen1s = sen1.strip().split(' ')
     words = []
     for i in sens:
-        '''
-        if(i not in sen1s):
-            words.append(len(word_dict)+1)
-            continue
-        '''
         if (word_dict.get(i) != None):
             words.append(word_dict.get(i))
     return words
 
 def compute(candidate, references, weights):
-    # candidate = [c.lower() for c in candidate]
-    # references = [[r.lower() for r in reference] for reference in references]
     p_ns = (modified_precision(candidate, references, i) for i, _ in enumerate(weights, start=1))
 
     s = math.fsum(w * math.log(p_n) for w, p_n in zip(weights, p_ns) if p_n)
@@ -44,7 +36,6 @@ def compute(candidate, references, weights):
 
 def modified_precision(candidate, references, n):
     counts = counter_gram(candidate, n)
-    # print counts
 
     if not counts:
         return 0
@@ -57,8 +48,6 @@ def modified_precision(candidate, references, n):
             else:
                 max_counts[ngram] = 0.000000001
     clipped_counts = dict((ngram, min(counts[ngram], max_counts[ngram])) for ngram in counts.keys())
-    # print counts
-    # print clipped_counts
 
     return sum(clipped_counts.values()) / sum(counts.values())
 
@@ -120,29 +109,13 @@ if __name__ == "__main__":
                 ref[lines[0].strip()].append(sen_to_array(lines[1].strip(), word_dict, lines[0]))
     f.close()
     print(len(ref))
-    # print len(can.keys())
-    # print ref.keys()
-    # print len(ref.keys())
+
     bleu_array = []
     bleu_total = 0
     for i in can.keys():
         if (ref.get(i) != None):
-            # print 'ok'
             bleu_score = compute(can[i], ref[i], weight)
             bleu_total += bleu_score
             bleu_array.append(bleu_score)
-            # print can[i]
-            # print ref[i]
 
     print(bleu_total / len(bleu_array))
-    # print bleu_total
-    # print len(bleu_array)
-    '''
-    for i in can.keys():
-        if(ref.get(i)!=None):
-            weight=[]
-            for j in range(len(ref.get(i))):
-                weight.append(1.0/len(ref.get(i))
-            print bleu.compute(can[i],ref[i],weight)
-    print 'ok'
-    '''
