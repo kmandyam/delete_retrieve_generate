@@ -119,11 +119,9 @@ def read_nmt_data(src, config, tgt, attribute_vocab, train_src=None, train_tgt=N
             attr = ' '.join(split[:-2])
 
             # usually, markers are only salient for one attribute, so we double check here
-            if pre_salience > salience:
-                pre_attr[attr] = pre_salience
-            if post_salience > salience:
-                post_attr[attr] = post_salience
-
+            pre_attr[attr] = pre_salience
+            post_attr[attr] = post_salience
+     
     src_lines = [l.strip().lower().split() for l in open(src, 'r')]
     src_lines, src_content, src_attribute = list(zip(
         *[extract_attributes(line, pre_attr) for line in src_lines]
