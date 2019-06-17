@@ -108,8 +108,6 @@ def read_nmt_data(src, config, tgt, attribute_vocab, train_src=None, train_tgt=N
     pre_attr = {}
     post_attr = {}
 
-    salience = config["data"]["salience_threshold"]
-
     with open(attribute_vocab) as attr_file:
         next(attr_file)  # skip the header line
         for line in attr_file:
@@ -118,7 +116,6 @@ def read_nmt_data(src, config, tgt, attribute_vocab, train_src=None, train_tgt=N
             post_salience = float(split[-1])
             attr = ' '.join(split[:-2])
 
-            # usually, markers are only salient for one attribute, so we double check here
             pre_attr[attr] = pre_salience
             post_attr[attr] = post_salience
      
@@ -127,6 +124,7 @@ def read_nmt_data(src, config, tgt, attribute_vocab, train_src=None, train_tgt=N
         *[extract_attributes(line, pre_attr) for line in src_lines]
     ))
     src_tok2id, src_id2tok = build_vocab_maps(config['data']['src_vocab'])
+
     # train time: just pick attributes that are close to the current (using word distance)
     # we never need to do the TFIDF thing with the source because 
     # test time is strictly in the src => tgt direction. 
